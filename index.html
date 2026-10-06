@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo Lulus</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap');
+    body { font-family: 'Quicksand', sans-serif; background-color: #fdf6f7; padding: 20px; color: #5a5a5a; }
+    .logo-container { text-align: center; margin-bottom: 20px; }
+    .logo-container img { max-width: 150px; border-radius: 50%; }
+    h1 { text-align: center; color: #ff9aa2; }
+
+    #buscador { width: 100%; max-width: 500px; margin: 20px auto; display: block; padding: 15px; border-radius: 25px; border: 2px solid #ff9aa2; text-align: center; font-size: 16px; box-sizing: border-box; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1000px; margin: auto; }
+    .card { background: white; padding: 15px; border-radius: 20px; border: 2px solid #ffdde1; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; text-align: center; }
+    .card img { width: 100%; height: 250px; object-fit: cover; border-radius: 15px; }
+    .precio-txt { font-weight: bold; color: #ff9aa2; font-size: 1.2em; margin: 10px 0; }
+
+    .controles-producto { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+    select, input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ff9aa2; box-sizing: border-box; }
+    .btn-add { width: 100%; padding: 12px; border: none; border-radius: 10px; background-color: #ff9aa2; color: white; font-weight: bold; cursor: pointer; }
+    .btn-add.agregado { background-color: #b5ead7 !important; color: #5a5a5a; }
+
+    #resumen-carrito { max-width: 600px; margin: 20px auto; padding: 15px; background: #fff; border: 2px solid #b5ead7; border-radius: 15px; font-weight: bold; }
+    .item-carrito { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 8px 0; font-size: 14px; font-weight: normal; }
+    .btn-eliminar { padding: 5px 10px; background: #ff9aa2; color: white; border-radius: 5px; font-size: 12px; cursor: pointer; border: none; }
+
+    .contenedor-pedidos { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 2px solid #ff9aa2; z-index: 999; margin-top: 20px; }
+    .btn-wpp { display: block; width: 100%; margin: 5px 0; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; text-align: center; }
+    .btn-jhon { background-color: #25D366; }
+    .btn-jhonder { background-color: #128C7E; }
+    .btn-nazareth { background-color: #075E54; }
+    #estado { text-align: center; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="logo-container"><img src="https://lh3.googleusercontent.com/d/1n2Ia_wMELY8KxYlfrGWT07v6KOocqqca" alt="Logo Lulus"></div>
+  <h1>Catálogo Lulus</h1>
+
+  <input type="text" id="buscador" placeholder="🔍 Buscar producto..." oninput="filtrarProductos()">
+
+  <div id="resumen-carrito">
+    <h3>Tu Pedido:</h3>
+    <div id="lista-carrito">Tu carrito está vacío.</div>
+    <div id="total-carrito" style="margin-top: 10px; border-top: 2px solid #b5ead7; padding-top: 10px;">Total: $0</div>
+  </div>
+
+  <div id="estado">Cargando catálogo...</div>
+  <div class="grid" id="app"></div>
+
+  <div class="contenedor-pedidos">
+    <p style="text-align: center; font-weight: bold; margin: 0 0 10px 0;">Enviar pedido a:</p>
+    <button class="btn-wpp btn-jhon" onclick="enviarPedido('584125734163')">WhatsApp Jhon</button>
+    <button class="btn-wpp btn-jhonder" onclick="enviarPedido('584226761253')">WhatsApp Jhonder</button>
+    <button class="btn-wpp btn-nazareth" onclick="enviarPedido('584123258825')">WhatsApp Nazareth</button>
+  </div>
+
+  <script>
+    // 👇 PEGA AQUÍ la URL de tu implementación de Apps Script (termina en /exec)
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyz6BtXRJ8kYxjXS4IVsp1BxszAJeHeSXBeAwJnPXCw0IwpW2El_QCkx7s8z8cMgorW/exec';
+
+    let productos = [];
+    let carrito = [];
+
+    function esc(t) {
+      return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function cargarCatalogo() {
+      fetch(API_URL)
+        .then(r => r.json())
+        .then(data => {
+          productos = data;
+          document.getElementById('estado').style.display = 'none';
+          pintarProductos();
+        })
+        .catch(() => {
+          document.getElementById('estado').innerText = 'No se pudo cargar el catálogo. Recarga la página.';
+        });
+    }
+
+    function pintarProductos() {
+      const app = document.getElementById('app');
+      app.innerHTML = productos.map((p, i) => `
+        <div class="card">
+          <img src="${esc(p.img)}" alt="${esc(p.nombre)}">
+          <h3>${esc(p.nombre)}</h3>
+          <p class="precio-txt">$${esc(p.precio)}</p>
+          <div class="controles-producto">
+            <select id="talla-${i}">
+              ${p.tallas.map(t => `<option value="${esc(t.talla)}" data-stock="${t.stock}" ${t.stock == 0 ? 'disabled' : ''}>${esc(t.talla)} ${t.stock == 0 ? '(Agotado)' : ''}</option>`).join('')}
+            </select>
+            <input type="number" id="cant-${i}" value="1" min="1">
+            <button class="btn-add" onclick="agregarAlCarrito(${i}, this)">Añadir al Carrito</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function agregarAlCarrito(i, btn) {
+      const p = productos[i];
+      const sel = document.getElementById('talla-' + i);
+      const cant = parseInt(document.getElementById('cant-' + i).value) || 1;
+      const stock = parseInt(sel.options[sel.selectedIndex].getAttribute('data-stock'));
+
+      if (cant > stock) { alert('No hay suficiente stock'); return; }
+
+      carrito.push({ producto: p.nombre, talla: sel.value, cantidad: cant, foto: p.img, precio: parseFloat(p.precio) });
+      actualizarVistaCarrito();
+
+      btn.classList.add('agregado');
+      btn.innerText = '¡Agregado!';
+      setTimeout(() => { btn.classList.remove('agregado'); btn.innerText = 'Añadir al Carrito'; }, 1000);
+    }
+
+    function actualizarVistaCarrito() {
+      const lista = document.getElementById('lista-carrito');
+      const totalDisplay = document.getElementById('total-carrito');
+      let total = 0;
+
+      if (carrito.length === 0) {
+        lista.innerHTML = 'Tu carrito está vacío.';
+        totalDisplay.innerHTML = 'Total: $0';
+        return;
+      }
+      lista.innerHTML = carrito.map((it, index) => {
+        total += it.precio * it.cantidad;
+        return `<div class="item-carrito">
+                  <span>${it.cantidad}x ${esc(it.producto)} (${esc(it.talla)}) - $${it.precio * it.cantidad}</span>
+                  <button class="btn-eliminar" onclick="eliminarDelCarrito(${index})">X</button>
+                </div>`;
+      }).join('');
+      totalDisplay.innerHTML = 'Total: $' + total;
+    }
+
+    function eliminarDelCarrito(index) {
+      carrito.splice(index, 1);
+      actualizarVistaCarrito();
+    }
+
+    function enviarPedido(telefono) {
+      if (carrito.length === 0) { alert('Carrito vacío'); return; }
+      let total = 0;
+      let msg = 'Hola Lulus Imports, deseo realizar este pedido:\n\n';
+      carrito.forEach(it => {
+        total += it.precio * it.cantidad;
+        msg += 'Producto: ' + it.producto + '\nPrecio: $' + it.precio + '\nTalla: ' + it.talla + '\nCantidad: ' + it.cantidad + '\nLink: ' + it.foto + '\n---------------------------\n';
+      });
+      msg += '\nTOTAL A PAGAR: $' + total;
+      window.open('https://wa.me/' + telefono + '?text=' + encodeURIComponent(msg), '_blank');
+    }
+
+    function filtrarProductos() {
+      const q = document.getElementById('buscador').value.toLowerCase();
+      document.querySelectorAll('.card').forEach(c => {
+        const nombre = c.querySelector('h3').innerText.toLowerCase();
+        c.style.display = nombre.includes(q) ? '' : 'none';
+      });
+    }
+
+    cargarCatalogo();
+  </script>
+</body>
+</html>
