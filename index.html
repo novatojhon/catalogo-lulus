@@ -68,16 +68,39 @@
       return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // Reduce el tamaño de las fotos de Google (cargan mucho más rápido)
+    function miniatura(url) {
+      url = String(url || '');
+      var m = url.match(/[-\w]{25,}/);
+      if (url.indexOf('googleusercontent.com') > -1 && url.indexOf('=') === -1) return url + '=w500';
+      if (url.indexOf('drive.google.com') > -1 && m) return 'https://lh3.googleusercontent.com/d/' + m[0] + '=w500';
+      return url;
+    }
+
     function cargarCatalogo() {
-      fetch(API_URL)
-        .then(r => r.json())
-        .then(data => {
-          productos = data;
+      // 1) Mostrar al instante lo que se guardó la última vez en este teléfono
+      var viejo = '';
+      try {
+        viejo = localStorage.getItem('catalogo_lulus') || '';
+        if (viejo) {
+          productos = JSON.parse(viejo);
           document.getElementById('estado').style.display = 'none';
           pintarProductos();
+        }
+      } catch (e) { viejo = ''; }
+
+      // 2) Pedir los datos nuevos y actualizar solo si cambiaron
+      fetch(API_URL)
+        .then(r => r.text())
+        .then(txt => {
+          if (txt === viejo) return;
+          productos = JSON.parse(txt);
+          document.getElementById('estado').style.display = 'none';
+          pintarProductos();
+          try { localStorage.setItem('catalogo_lulus', txt); } catch (e) {}
         })
         .catch(() => {
-          document.getElementById('estado').innerText = 'No se pudo cargar el catálogo. Recarga la página.';
+          if (!viejo) document.getElementById('estado').innerText = 'No se pudo cargar el catálogo. Recarga la página.';
         });
     }
 
@@ -85,7 +108,7 @@
       const app = document.getElementById('app');
       app.innerHTML = productos.map((p, i) => `
         <div class="card">
-          <img src="${esc(p.img)}" alt="${esc(p.nombre)}">
+          <img src="${esc(miniatura(p.img))}" alt="${esc(p.nombre)}" loading="lazy" decoding="async">
           <h3>${esc(p.nombre)}</h3>
           <p class="precio-txt">$${esc(p.precio)}</p>
           <div class="controles-producto">
